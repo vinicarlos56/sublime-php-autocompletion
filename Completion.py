@@ -42,38 +42,42 @@ class Completion(sublime_plugin.EventListener):
         return completions
 
     def load_opened_files(self, views):
-        for view in views:
-            if '.php' in view.file_name():
-                self._php_opened_files.append(view.file_name())
+        if views is not None:
+            for view in views:
+                if view.file_name() is not None and '.php' in view.file_name():
+                    self._php_opened_files.append(view.file_name())
 
     def build_methods_list(self):
         for file in self._php_opened_files:
             self.load_methods_per_file(file)
 
     def load_methods_per_file(self, file_name):
-        file_lines = open(file_name, 'rU')
-        class_name = ''
-        signature = ''
-        name = ''
-        for line in file_lines:
-            class_match = re.search('[c|C]lass[\s]+(\w+)[\s\S]*', line)
+        if os.path.exists(file_name):
 
-            if class_match is not None and class_match.group(1) != class_name:
-                class_name = class_match.group(1)
+            file_lines = open(file_name, 'rU')
+            class_name = ''
+            signature = ''
+            name = ''
 
-            if "function" in line:
-                methods_matches = re.search('[\S\s]*\sfunction\s(\w+)\((.*)\)', line)
+            for line in file_lines:
+                class_match = re.search('[c|C]lass[\s]+(\w+)[\s\S]*', line)
 
-                if methods_matches is not None:
-                    class_name = class_name if class_name is not None else basename(file_name)
+                if class_match is not None and class_match.group(1) != class_name:
+                    class_name = class_match.group(1)
 
-                    if "static" in line:
-                        name = class_name+'::'+methods_matches.group(1)
-                    else:
-                        name = methods_matches.group(1)
+                if "function" in line:
+                    methods_matches = re.search('[\S\s]*\sfunction\s(\w+)\((.*)\)', line)
 
-                    signature = methods_matches.group(2)
-                    self.add_function(name, signature, class_name)
+                    if methods_matches is not None:
+                        class_name = class_name if class_name is not None else basename(file_name)
+
+                        if "static" in line:
+                            name = class_name+'::'+methods_matches.group(1)
+                        else:
+                            name = methods_matches.group(1)
+
+                        signature = methods_matches.group(2)
+                        self.add_function(name, signature, class_name)
 
     def add_function(self, name, signature, file_name):
         self._methods.append(Method(name, signature, file_name))
